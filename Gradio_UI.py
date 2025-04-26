@@ -34,7 +34,7 @@ def pull_messages_from_step(
     if isinstance(step_log, ActionStep):
         # Output the step number
         step_number = f"Step {step_log.step_number}" if step_log.step_number is not None else ""
-        yield gr.ChatMessage(role="assistant", content=f"**{step_number}**")
+        yield {"role": "assistant", "content": f"**{step_number}**"}
 
         # First yield the thought/reasoning from the LLM
         if hasattr(step_log, "model_output") and step_log.model_output is not None:
@@ -45,7 +45,7 @@ def pull_messages_from_step(
             model_output = re.sub(r"<end_code>\s*```", "```", model_output)  # handles <end_code>```
             model_output = re.sub(r"```\s*\n\s*<end_code>", "```", model_output)  # handles ```\n<end_code>
             model_output = model_output.strip()
-            yield gr.ChatMessage(role="assistant", content=model_output)
+            yield {"role": "assistant", "content": model_output}
 
         # For tool calls, create a parent message
         if hasattr(step_log, "tool_calls") and step_log.tool_calls is not None:
@@ -69,15 +69,15 @@ def pull_messages_from_step(
                 if not content.startswith("```python"):
                     content = f"```python\n{content}\n```"
 
-            parent_message_tool = gr.ChatMessage(
-                role="assistant",
-                content=content,
-                metadata={
+            parent_message_tool = {
+                "role": "assistant",
+                "content": content,
+                "metadata": {
                     "title": f"🛠️ Used tool {first_tool_call.name}",
                     "id": parent_id,
                     "status": "pending",
                 },
-            )
+            }
             yield parent_message_tool
 
             # Nesting execution logs under the tool call if they exist
@@ -87,26 +87,26 @@ def pull_messages_from_step(
                 log_content = step_log.observations.strip()
                 if log_content:
                     log_content = re.sub(r"^Execution logs:\s*", "", log_content)
-                    yield gr.ChatMessage(
-                        role="assistant",
-                        content=f"{log_content}",
-                        metadata={"title": "📝 Execution Logs", "parent_id": parent_id, "status": "done"},
-                    )
+                    yield {
+                        "role": "assistant",
+                        "content": f"{log_content}",
+                        "metadata": {"title": "📝 Execution Logs", "parent_id": parent_id, "status": "done"},
+                    }
 
             # Nesting any errors under the tool call
             if hasattr(step_log, "error") and step_log.error is not None:
-                yield gr.ChatMessage(
-                    role="assistant",
-                    content=str(step_log.error),
-                    metadata={"title": "💥 Error", "parent_id": parent_id, "status": "done"},
-                )
+                yield {
+                    "role": "assistant",
+                    "content": str(step_log.error),
+                    "metadata": {"title": "💥 Error", "parent_id": parent_id, "status": "done"},
+                }
 
             # Update parent message metadata to done status without yielding a new message
-            parent_message_tool.metadata["status"] = "done"
+            parent_message_tool["metadata"]["status"] = "done"
 
         # Handle standalone errors but not from tool calls
         elif hasattr(step_log, "error") and step_log.error is not None:
-            yield gr.ChatMessage(role="assistant", content=str(step_log.error), metadata={"title": "💥 Error"})
+            yield {"role": "assistant", "content": str(step_log.error), "metadata": {"title": "💥 Error"}}
 
         # Calculate duration and token information
         step_footnote = f"{step_number}"
@@ -119,8 +119,8 @@ def pull_messages_from_step(
             step_duration = f" | Duration: {round(float(step_log.duration), 2)}" if step_log.duration else None
             step_footnote += step_duration
         step_footnote = f"""<span style="color: #bbbbc2; font-size: 12px;">{step_footnote}</span> """
-        yield gr.ChatMessage(role="assistant", content=f"{step_footnote}")
-        yield gr.ChatMessage(role="assistant", content="-----")
+        yield {"role": "assistant", "content": f"{step_footnote}"}
+        yield {"role": "assistant", "content": "-----"}
 
 
 def stream_to_gradio(
@@ -157,22 +157,13 @@ def stream_to_gradio(
     final_answer = handle_agent_output_types(final_answer)
 
     if isinstance(final_answer, AgentText):
-        yield gr.ChatMessage(
-            role="assistant",
-            content=f"**Final answer:**\n{final_answer.to_string()}\n",
-        )
+        yield {"role": "assistant", "content": f"**Final answer:**\n{final_answer.to_string()}\n"}
     elif isinstance(final_answer, AgentImage):
-        yield gr.ChatMessage(
-            role="assistant",
-            content={"path": final_answer.to_string(), "mime_type": "image/png"},
-        )
+        yield {"role": "assistant", "content": {"path": final_answer.to_string(), "mime_type": "image/png"}}
     elif isinstance(final_answer, AgentAudio):
-        yield gr.ChatMessage(
-            role="assistant",
-            content={"path": final_answer.to_string(), "mime_type": "audio/wav"},
-        )
+        yield {"role": "assistant", "content": {"path": final_answer.to_string(), "mime_type": "audio/wav"}}
     else:
-        yield gr.ChatMessage(role="assistant", content=f"**Final answer:** {str(final_answer)}")
+        yield {"role": "assistant", "content": f"**Final answer:** {str(final_answer)}"}
 
 
 class GradioUI:
@@ -192,7 +183,7 @@ class GradioUI:
     def interact_with_agent(self, prompt, messages):
         import gradio as gr
 
-        messages.append(gr.ChatMessage(role="user", content=prompt))
+        messages.append({"role": "user", "content": prompt})
         yield messages
         for msg in stream_to_gradio(self.agent, task=prompt, reset_agent_memory=False):
             messages.append(msg)
@@ -247,7 +238,7 @@ class GradioUI:
                 submit_button = gr.Button("Submit")
 
             with gr.Row():
-                chat_box = gr.Chatbot(label="Chat")
+                chat_box = gr.Chatbot(label="Chat", type="messages")
 
             submit_button.click(self.interact_with_agent, inputs=[prompt_input, chat_box], outputs=chat_box)
 
