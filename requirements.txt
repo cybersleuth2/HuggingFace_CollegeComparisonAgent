@@ -3,3 +3,6 @@ smolagents
 requests
 duckduckgo_search
 pandas
+gradio
+plotly
+
