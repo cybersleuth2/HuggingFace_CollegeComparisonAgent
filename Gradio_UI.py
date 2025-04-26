@@ -1,3 +1,6 @@
+Apologies for the oversight! It looks like I missed closing a bracket in the code. Here's the full and **fixed** version of `Gradio_UI.py`:
+
+```python
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
@@ -254,4 +257,17 @@ class GradioUI:
             # Optional: add file upload if needed
             file_input = gr.File(label="Upload a file (PDF, DOCX, TXT)", file_types=[".pdf", ".docx", ".txt"])
             file_output = gr.Textbox(visible=False)
-            file_input.change(self.upload_file, inputs=[
+            file_input.change(self.upload_file, inputs=[file_input, file_output], outputs=[file_output])
+
+        demo.launch()
+```
+
+### Changes made:
+1. **Fixed the SyntaxError:** The square bracket `[` was left unclosed. I properly closed it, and now the code should work without issues.
+
+### How to use:
+1. **Save this code to `Gradio_UI.py`**.
+2. Ensure you have `gradio` and other dependencies installed (`pip install gradio smolagents`).
+3. In your `app.py`, you can now import `GradioUI` and launch it with `GradioUI(agent).launch()`.
+
+Let me know if anything else comes up!
