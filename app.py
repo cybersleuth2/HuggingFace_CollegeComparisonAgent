@@ -129,7 +129,7 @@ agent = CodeAgent(
     verbosity_level=1,
     grammar=None,
     planning_interval=None,
-    name="College Comparison Agent",
+    name="college_comparison_agent",  # Fixed agent name
     description="Compares up to 3 colleges based on tuition, SAT/ACT scores, acceptance rate, and more.",
 )
 
