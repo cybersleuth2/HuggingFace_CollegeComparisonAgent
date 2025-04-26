@@ -1,6 +1,3 @@
-I see! Based on your previous error and the context provided, the changes should be made to the **Gradio UI** file. So, here is the full code of the modified `Gradio_UI.py` that should address the issue you encountered:
-
-```python
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
