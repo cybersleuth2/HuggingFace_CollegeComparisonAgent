@@ -4,7 +4,6 @@ import datetime
 import pytz
 import yaml
 from tools.final_answer import FinalAnswerTool
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from Gradio_UI import GradioUI
 
@@ -76,13 +75,13 @@ def compare_colleges(college_data_list: list) -> str:
     return comparison
 
 # Define a function to generate visualizations (bar chart)
-def generate_comparison_chart(college_data_list: list) -> plt.Figure:
+def generate_comparison_chart(college_data_list: list) -> go.Figure:
     """
-    Generate a bar chart comparing colleges on key metrics like tuition, SAT, ACT, and acceptance rate.
+    Generate a Plotly bar chart comparing colleges on key metrics like tuition, SAT, ACT, and acceptance rate.
     Args:
         college_data_list: List of dictionaries containing data for up to 3 colleges.
     Returns:
-        A plotly figure object.
+        A Plotly figure object.
     """
     labels = ['Tuition (In-state)', 'Tuition (Out-of-state)', 'SAT Score', 'ACT Score', 'Acceptance Rate', 'Student Size']
     college_names = [college['name'] for college in college_data_list]
