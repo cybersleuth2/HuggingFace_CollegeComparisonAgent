@@ -1,28 +1,28 @@
-import os
-import requests
-import plotly.graph_objects as go
 from smolagents import CodeAgent, HfApiModel, tool
+import requests
+import os
+import plotly.graph_objects as go
 from tools.final_answer import FinalAnswerTool
 from Gradio_UI import GradioUI
 
 # College Scorecard API URL
 COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
 
-# Securely fetch API key from environment variables (stored in Hugging Face Space secrets)
-COLLEGE_API_KEY = os.getenv("COLLEGE_API_KEY")
-
-# Ensure COLLEGE_API_KEY is provided in Hugging Face Space secrets
-if not COLLEGE_API_KEY:
-    raise ValueError("COLLEGE_API_KEY is not set in the environment variables or Space secrets.")
-
 @tool
 def fetch_college_data(college_name: str) -> dict:
     """
     Fetches data from the College Scorecard API for a given college name.
+
+    Args:
+        college_name (str): The name of the college to search for.
+
+    Returns:
+        dict: A dictionary containing the college's data, including name, city, state, 
+              student size, ownership, SAT score, ACT score, acceptance rate, and tuition.
     """
     try:
         params = {
-            "api_key": COLLEGE_API_KEY,
+            "api_key": os.getenv("COLLEGE_API_KEY"),
             "school.name": college_name,
             "fields": "school.name,school.city,school.state,school.student.size,school.ownership,"
                       "school.sat_scores.average.overall,school.act_scores.average.overall,"
@@ -47,12 +47,18 @@ def fetch_college_data(college_name: str) -> dict:
         else:
             return {"error": "College not found or API error."}
     except Exception as e:
-        return {"error": f"Error fetching college data: {str(e)}"}
+        return {"error": str(e)}
 
 @tool
 def compare_colleges(college_data_list: list) -> str:
     """
     Compares up to 3 colleges and returns an HTML table displaying their key metrics.
+
+    Args:
+        college_data_list (list): A list of dictionaries, where each dictionary contains data for a college.
+        
+    Returns:
+        str: An HTML table as a string showing the comparison of colleges' data.
     """
     if not college_data_list:
         return "<p>No valid college data provided.</p>"
@@ -83,6 +89,12 @@ def compare_colleges(college_data_list: list) -> str:
 def generate_comparison_chart(college_data_list: list) -> go.Figure:
     """
     Generates a bar chart comparing key metrics for up to 3 colleges.
+
+    Args:
+        college_data_list (list): A list of dictionaries, where each dictionary contains data for a college.
+
+    Returns:
+        go.Figure: A Plotly bar chart figure comparing key metrics of the colleges.
     """
     labels = ['Tuition (In-state)', 'Tuition (Out-of-state)', 'SAT Score', 'ACT Score', 'Acceptance Rate', 'Student Size']
     data = {
@@ -108,9 +120,20 @@ def generate_comparison_chart(college_data_list: list) -> go.Figure:
                       yaxis_title="Values")
     return fig
 
+# Required by Gradio UI
 def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
     """
     Fetches data for three colleges and generates a table and chart comparing them.
+
+    Args:
+        college1_name (str): The name of the first college.
+        college2_name (str): The name of the second college.
+        college3_name (str, optional): The name of the third college, default is None.
+
+    Returns:
+        tuple: A tuple containing:
+            - An HTML table string comparing the colleges.
+            - A Plotly chart figure comparing the colleges.
     """
     college_data_list = []
     for name in [college1_name, college2_name, college3_name]:
@@ -126,15 +149,14 @@ def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: s
     chart = generate_comparison_chart(college_data_list)
     return table, chart
 
-# Set up the agent using a free model (e.g., GPT-Neo 2.7B)
+# Set up the agent
+final_answer = FinalAnswerTool()
 model = HfApiModel(
-    model_id='EleutherAI/gpt-neo-2.7B',
+    model_id='mistralai/Mistral-7B-Instruct-v0.1',
     max_tokens=1024,
     temperature=0.5,
 )
 
-# Set up the agent with tools
-final_answer = FinalAnswerTool()
 agent = CodeAgent(
     model=model,
     tools=[final_answer, fetch_college_data, compare_colleges],
@@ -144,5 +166,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch the Gradio UI
+# Launch
 GradioUI(agent).launch()
