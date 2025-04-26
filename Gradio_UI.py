@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import mimetypes
 import os
 import re
@@ -111,11 +110,11 @@ def pull_messages_from_step(
 
         # Calculate duration and token information
         step_footnote = f"{step_number}"
-        input_tokens = step_log.input_token_count if step_log.input_token_count is not None else 0
-        output_tokens = step_log.output_token_count if step_log.output_token_count is not None else 0
-
-        token_str = f" | Input-tokens:{input_tokens:,} | Output-tokens:{output_tokens:,}"
-        step_footnote += token_str
+        if hasattr(step_log, "input_token_count") and hasattr(step_log, "output_token_count"):
+            token_str = (
+                f" | Input-tokens:{step_log.input_token_count:,} | Output-tokens:{step_log.output_token_count:,}"
+            )
+            step_footnote += token_str
         if hasattr(step_log, "duration"):
             step_duration = f" | Duration: {round(float(step_log.duration), 2)}" if step_log.duration else None
             step_footnote += step_duration
@@ -200,20 +199,13 @@ class GradioUI:
             yield messages
         yield messages
 
-    def upload_file(
-        self,
-        file,
-        file_uploads_log,
-        allowed_file_types=[
-            "application/pdf",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "text/plain",
-        ],
-    ):
-        """
-        Handle file uploads, default allowed types are .pdf, .docx, and .txt
-        """
-        import gradio as gr
+    def upload_file(self, file, file_uploads_log, allowed_file_types=None):
+        if allowed_file_types is None:
+            allowed_file_types = [
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "text/plain",
+            ]
 
         if file is None:
             return gr.Textbox("No file uploaded", visible=True), file_uploads_log
@@ -226,24 +218,40 @@ class GradioUI:
         if mime_type not in allowed_file_types:
             return gr.Textbox("File type disallowed", visible=True), file_uploads_log
 
-        # Sanitize file name
         original_name = os.path.basename(file.name)
-        sanitized_name = re.sub(
-            r"[^\w\-.]", "_", original_name
-        )  # Replace any non-alphanumeric, non-dash, or non-dot characters with underscores
+        sanitized_name = re.sub(r"[^\w\-.]", "_", original_name)
 
         type_to_ext = {}
         for ext, t in mimetypes.types_map.items():
             if t not in type_to_ext:
                 type_to_ext[t] = ext
 
-        # Ensure the extension correlates to the mime type
         sanitized_name = sanitized_name.split(".")[:-1]
-        sanitized_name.append("" + type_to_ext[mime_type])
+        sanitized_name.append(type_to_ext[mime_type])
         sanitized_name = "".join(sanitized_name)
 
-        # Save the uploaded file to the specified folder
         file_path = os.path.join(self.file_upload_folder, os.path.basename(sanitized_name))
         shutil.copy(file.name, file_path)
 
         return gr.Textbox(f"File uploaded: {file_path}", visible=True), file_uploads_log + [file_path]
+
+    def launch(self):
+        """Creates and launches the Gradio interface"""
+        import gradio as gr
+
+        with gr.Blocks() as demo:
+            gr.Markdown("# Interact with the Agent")
+
+            with gr.Row():
+                prompt_input = gr.Textbox(label="Enter your prompt", lines=2)
+                submit_button = gr.Button("Submit")
+
+            with gr.Row():
+                chat_box = gr.Chatbot(label="Chat")
+
+            submit_button.click(self.interact_with_agent, inputs=[prompt_input, chat_box], outputs=chat_box)
+
+            # Optional: add file upload if needed
+            file_input = gr.File(label="Upload a file (PDF, DOCX, TXT)", file_types=[".pdf", ".docx", ".txt"])
+            file_output = gr.Textbox(visible=False)
+            file_input.change(self.upload_file, inputs=[
