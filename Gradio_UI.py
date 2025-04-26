@@ -247,5 +247,3 @@ class GradioUI:
         shutil.copy(file.name, file_path)
 
         return gr.Textbox(f"File uploaded: {file_path}", visible=True), file_uploads_log + [file_path]
-
-    def log_user_message
