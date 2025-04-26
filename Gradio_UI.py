@@ -1,3 +1,6 @@
+I see! Based on your previous error and the context provided, the changes should be made to the **Gradio UI** file. So, here is the full code of the modified `Gradio_UI.py` that should address the issue you encountered:
+
+```python
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
@@ -13,6 +16,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import mimetypes
 import os
 import re
@@ -110,11 +114,11 @@ def pull_messages_from_step(
 
         # Calculate duration and token information
         step_footnote = f"{step_number}"
-        if hasattr(step_log, "input_token_count") and hasattr(step_log, "output_token_count"):
-            token_str = (
-                f" | Input-tokens:{step_log.input_token_count:,} | Output-tokens:{step_log.output_token_count:,}"
-            )
-            step_footnote += token_str
+        input_tokens = step_log.input_token_count if step_log.input_token_count is not None else 0
+        output_tokens = step_log.output_token_count if step_log.output_token_count is not None else 0
+
+        token_str = f" | Input-tokens:{input_tokens:,} | Output-tokens:{output_tokens:,}"
+        step_footnote += token_str
         if hasattr(step_log, "duration"):
             step_duration = f" | Duration: {round(float(step_log.duration), 2)}" if step_log.duration else None
             step_footnote += step_duration
@@ -142,9 +146,8 @@ def stream_to_gradio(
     for step_log in agent.run(task, stream=True, reset=reset_agent_memory, additional_args=additional_args):
         # Track tokens if model provides them
         if hasattr(agent.model, "last_input_token_count"):
-            # Ensure the token count is not None before adding
-            total_input_tokens += agent.model.last_input_token_count if agent.model.last_input_token_count is not None else 0
-            total_output_tokens += agent.model.last_output_token_count if agent.model.last_output_token_count is not None else 0
+            total_input_tokens += agent.model.last_input_token_count
+            total_output_tokens += agent.model.last_output_token_count
             if isinstance(step_log, ActionStep):
                 step_log.input_token_count = agent.model.last_input_token_count
                 step_log.output_token_count = agent.model.last_output_token_count
@@ -248,50 +251,4 @@ class GradioUI:
 
         return gr.Textbox(f"File uploaded: {file_path}", visible=True), file_uploads_log + [file_path]
 
-    def log_user_message(self, text_input, file_uploads_log):
-        return (
-            text_input
-            + (
-                f"\nYou have been provided with these files, which might be helpful or not: {file_uploads_log}"
-                if len(file_uploads_log) > 0
-                else ""
-            ),
-            "",
-        )
-
-    def launch(self, **kwargs):
-        import gradio as gr
-
-        with gr.Blocks(fill_height=True) as demo:
-            stored_messages = gr.State([])
-            file_uploads_log = gr.State([])
-            chatbot = gr.Chatbot(
-                label="Agent",
-                type="messages",
-                avatar_images=(
-                    None,
-                    "https://huggingface.co/datasets/agents-course/course-images/resolve/main/en/communication/Alfred.png",
-                ),
-                resizeable=True,
-                scale=1,
-            )
-            # If an upload folder is provided, enable the upload feature
-            if self.file_upload_folder is not None:
-                upload_file = gr.File(label="Upload a file")
-                upload_status = gr.Textbox(label="Upload Status", interactive=False, visible=False)
-                upload_file.change(
-                    self.upload_file,
-                    [upload_file, file_uploads_log],
-                    [upload_status, file_uploads_log],
-                )
-            text_input = gr.Textbox(lines=1, label="Chat Message")
-            text_input.submit(
-                self.log_user_message,
-                [text_input, file_uploads_log],
-                [stored_messages, text_input],
-            ).then(self.interact_with_agent, [stored_messages, chatbot], [chatbot])
-
-        demo.launch(debug=True, share=True, **kwargs)
-
-
-__all__ = ["stream_to_gradio", "GradioUI"]
+    def log_user_message
