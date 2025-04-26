@@ -123,8 +123,6 @@ model = HfApiModel(
     custom_role_conversions=None,
 )
 
-)
-
 agent = CodeAgent(
     model=model,
     tools=[final_answer, fetch_college_data, compare_colleges],
