@@ -155,7 +155,7 @@ def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: s
 # Set up the agent
 final_answer = FinalAnswerTool()
 model = HfApiModel(
-    model_id='google/flan-t5-xl',
+    model_id='mistralai/Mistral-7B-Instruct-v0.1',
     max_tokens=1024,
     temperature=0.5,
 )
