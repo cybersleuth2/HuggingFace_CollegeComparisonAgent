@@ -1,16 +1,16 @@
-from smolagents import CodeAgent, DuckDuckGoSearchTool, HfApiModel, load_tool, tool
+from smolagents import CodeAgent, HfApiModel, tool
 import requests
 import datetime
 import pytz
 import yaml
-from tools.final_answer import FinalAnswerTool
+import os
 import plotly.graph_objects as go
+from tools.final_answer import FinalAnswerTool
 from Gradio_UI import GradioUI
 
 # College Scorecard API URL
 COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
 
-# Define a tool to fetch college data from the College Scorecard API
 @tool
 def fetch_college_data(college_name: str) -> dict:
     """
@@ -21,19 +21,17 @@ def fetch_college_data(college_name: str) -> dict:
         A dictionary containing the college's data.
     """
     try:
-        # Define the parameters for the API call
         params = {
-            "api_key": "YOUR_API_KEY",  # Get this from data.gov
+            "api_key": os.getenv("COLLEGE_API_KEY"),
             "school.name": college_name,
-            "fields": "school.name,school.city,school.state,school.student.size,school.ownership,school.sat_scores.average.overall,school.act_scores.average.overall,school.admission_rate.overall,school.cost.tuition.in_state,school.cost.tuition.out_of_state"
+            "fields": "school.name,school.city,school.state,school.student.size,school.ownership,"
+                      "school.sat_scores.average.overall,school.act_scores.average.overall,"
+                      "school.admission_rate.overall,school.cost.tuition.in_state,school.cost.tuition.out_of_state"
         }
-        
-        # Make the API request
         response = requests.get(COLLEGE_SCORECARD_API_URL, params=params)
         data = response.json()
-        
         if "results" in data and data["results"]:
-            college_data = data["results"][0]  # Use the first match
+            college_data = data["results"][0]
             return {
                 "name": college_data["school"]["name"],
                 "city": college_data["school"]["city"],
@@ -51,42 +49,39 @@ def fetch_college_data(college_name: str) -> dict:
     except Exception as e:
         return {"error": str(e)}
 
-# Define the college comparison tool
 @tool
 def compare_colleges(college_data_list: list) -> str:
     """
-    Compares up to 3 colleges based on tuition, SAT/ACT scores, acceptance rate, and more.
-    Args:
-        college_data_list: List of dictionaries containing data for up to 3 colleges.
-    Returns:
-        A string comparison report.
+    Compares up to 3 colleges and returns an HTML table.
     """
-    comparison = ""
-    
-    # Create header for the comparison
-    comparison += f"Comparison between {', '.join([college['name'] for college in college_data_list])}:\n\n"
+    if not college_data_list:
+        return "<p>No valid college data provided.</p>"
 
-    for key in ['tuition_in_state', 'tuition_out_of_state', 'sat_score', 'act_score', 'acceptance_rate', 'student_size']:
-        comparison += f"{key.replace('_', ' ').title()}:\n"
-        for college in college_data_list:
-            comparison += f"  {college['name']}: {college[key]}\n"
-        comparison += "\n"
+    headers = ["Name", "City", "State", "Student Size", "SAT", "ACT", "Acceptance Rate", "Tuition (In-state)", "Tuition (Out-of-state)"]
+    rows = []
+    for college in college_data_list:
+        rows.append([
+            college.get("name", "N/A"),
+            college.get("city", "N/A"),
+            college.get("state", "N/A"),
+            college.get("student_size", "N/A"),
+            college.get("sat_score", "N/A"),
+            college.get("act_score", "N/A"),
+            college.get("acceptance_rate", "N/A"),
+            college.get("tuition_in_state", "N/A"),
+            college.get("tuition_out_of_state", "N/A"),
+        ])
 
-    return comparison
+    html = "<table border='1' style='border-collapse: collapse; padding: 8px;'>"
+    html += "<tr>" + "".join([f"<th>{header}</th>" for header in headers]) + "</tr>"
+    for row in rows:
+        html += "<tr>" + "".join([f"<td>{str(cell)}</td>" for cell in row]) + "</tr>"
+    html += "</table>"
 
-# Define a function to generate visualizations (bar chart)
+    return html
+
 def generate_comparison_chart(college_data_list: list) -> go.Figure:
-    """
-    Generate a Plotly bar chart comparing colleges on key metrics like tuition, SAT, ACT, and acceptance rate.
-    Args:
-        college_data_list: List of dictionaries containing data for up to 3 colleges.
-    Returns:
-        A Plotly figure object.
-    """
     labels = ['Tuition (In-state)', 'Tuition (Out-of-state)', 'SAT Score', 'ACT Score', 'Acceptance Rate', 'Student Size']
-    college_names = [college['name'] for college in college_data_list]
-
-    # Prepare data for plotting
     data = {
         "Tuition (In-state)": [college['tuition_in_state'] for college in college_data_list],
         "Tuition (Out-of-state)": [college['tuition_out_of_state'] for college in college_data_list],
@@ -97,8 +92,6 @@ def generate_comparison_chart(college_data_list: list) -> go.Figure:
     }
 
     fig = go.Figure()
-
-    # Add traces for each college
     for i, college in enumerate(college_data_list):
         fig.add_trace(go.Bar(
             x=labels,
@@ -109,17 +102,31 @@ def generate_comparison_chart(college_data_list: list) -> go.Figure:
     fig.update_layout(title="College Comparison",
                       barmode='group',
                       xaxis_title="Metrics",
-                      yaxis_title="Values",
-                      showlegend=True)
-
+                      yaxis_title="Values")
     return fig
+
+# Required by Gradio UI
+def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
+    college_data_list = []
+    for name in [college1_name, college2_name, college3_name]:
+        if name:
+            data = fetch_college_data(name)
+            if "error" not in data:
+                college_data_list.append(data)
+
+    if not college_data_list:
+        return "<p>No data found.</p>", go.Figure()
+
+    table = compare_colleges(college_data_list)
+    chart = generate_comparison_chart(college_data_list)
+    return table, chart
 
 # Set up the agent
 final_answer = FinalAnswerTool()
 model = HfApiModel(
-    max_tokens=2096,
+    model_id='tiiuae/falcon-7b-instruct',
+    max_tokens=1024,
     temperature=0.5,
-    model_id='Qwen/Qwen2.5-Coder-32B-Instruct',  # it is possible that this model may be overloaded
     custom_role_conversions=None,
 )
 
@@ -128,32 +135,9 @@ agent = CodeAgent(
     tools=[final_answer, fetch_college_data, compare_colleges],
     max_steps=6,
     verbosity_level=1,
-    grammar=None,
-    planning_interval=None,
-    name="college_comparison_agent",  # Fixed agent name
-    description="Compares up to 3 colleges based on tuition, SAT/ACT scores, acceptance rate, and more.",
+    name="college_comparison_agent",
+    description="Compare colleges based on data.",
 )
 
-# Create the Gradio UI to interact with the agent
-gr_interface = GradioUI(agent)
-
-# Function to run the comparison
-def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
-    # Fetch data for each college
-    college_data_list = []
-    for college_name in [college1_name, college2_name, college3_name]:
-        if college_name:
-            college_data = fetch_college_data(college_name)
-            if "error" not in college_data:
-                college_data_list.append(college_data)
-    
-    # Perform comparison and generate report
-    comparison_report = compare_colleges(college_data_list)
-
-    # Generate and display the chart
-    comparison_chart = generate_comparison_chart(college_data_list)
-
-    return comparison_report, comparison_chart
-
-# Launch the Gradio UI
-gr_interface.launch()
+# Launch
+GradioUI(agent).launch()
