@@ -7,4 +7,4 @@ gradio
 plotly
 pytz
 pyyaml
-
+huggingface_hub
