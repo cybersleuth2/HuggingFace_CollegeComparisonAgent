@@ -1,13 +1,13 @@
 import gradio as gr
-from smolagents import CodeAgent, tool
-from app import fetch_college_data, compare_colleges, generate_comparison_chart  # Import directly from app.py
 
 class GradioUI:
     def __init__(self, agent):
         self.agent = agent
 
     def compare_colleges_ui(self, college1_name: str, college2_name: str, college3_name: str = None):
-        # This will use the compare_colleges function from app.py
+        # Import the necessary functions from app.py here, inside the function, to prevent circular imports
+        from app import fetch_college_data, compare_colleges, generate_comparison_chart
+        
         college_data_list = []
         for name in [college1_name, college2_name, college3_name]:
             if name:
@@ -36,4 +36,3 @@ class GradioUI:
             submit_btn.click(self.compare_colleges_ui, inputs=[college1, college2, college3], outputs=[output_table, output_chart])
 
         demo.launch()
-
