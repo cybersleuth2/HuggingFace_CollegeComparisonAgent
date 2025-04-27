@@ -1,13 +1,9 @@
 import gradio as gr
-from smolagents.agents import ActionStep, MultiStepAgent
-from smolagents.agent_types import AgentAudio, AgentImage, AgentText, handle_agent_output_types
+import pandas as pd
+from smolagents import MultiStepAgent
+from smolagents.agent_types import AgentText
 from smolagents.memory import MemoryStep
 import re
-import csv
-import os
-from io import StringIO
-
-# Assuming the 'fetch_college_data', 'compare_colleges', 'generate_comparison_chart' are now in app.py or directly available
 
 def pull_messages_from_step(step_log: MemoryStep):
     """Extract and format messages from each agent step."""
@@ -124,4 +120,5 @@ class GradioUI:
             live=True,
             allow_flagging="never",
         )
-        iface.launch(share=True)  # share=True enables sharing the app via a public link
+        iface.launch(share=True)  # Now share=True to allow external access via link
+
