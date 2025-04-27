@@ -105,13 +105,14 @@ def stream_to_gradio(agent, task: str, reset_agent_memory: bool = False, additio
 class GradioUI:
     """Simplified Gradio interface for launching your agent."""
 
-    def __init__(self, agent: MultiStepAgent, task: str = "Compare college tuition costs", reset_agent_memory: bool = False):
+    def __init__(self, agent: MultiStepAgent, task: str = "Compare college tuition costs", reset_agent_memory: bool = False, share: bool = True):
         self.agent = agent
         self.task = task
         self.reset_agent_memory = reset_agent_memory
+        self.share = share  # This will allow for sharing option
 
     def launch(self):
-        """Start the Gradio interface without share link."""
+        """Start the Gradio interface with optional sharing of link."""
         iface = gr.Interface(
             fn=lambda task: stream_to_gradio(self.agent, task, self.reset_agent_memory),
             inputs=[gr.Textbox(label="College Comparison Task", placeholder="e.g., Compare Harvard vs Stanford", lines=1)],
@@ -120,5 +121,5 @@ class GradioUI:
             live=True,
             allow_flagging="never",
         )
-        iface.launch(share=True)  # Now share=True to allow external access via link
-
+        # Use the share parameter here to enable external access via a link
+        iface.launch(share=self.share)
