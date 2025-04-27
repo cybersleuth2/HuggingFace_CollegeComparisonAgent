@@ -149,10 +149,10 @@ def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: s
     chart = generate_comparison_chart(college_data_list)
     return table, chart
 
-# Set up the agent
+# Set up the agent with the new free Mistral model
 final_answer = FinalAnswerTool()
 model = HfApiModel(
-    model_id='mistralai/Mistral-7B-Instruct-v0.1',
+    model_id='mistralai/Mistral-Small-3.1-24B-Instruct-2503',  # Updated to use the free Mistral model
     max_tokens=1024,
     temperature=0.5,
 )
@@ -166,5 +166,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch
+# Launch Gradio UI
 GradioUI(agent).launch()
