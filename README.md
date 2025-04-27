@@ -1,5 +1,7 @@
 ## Hugging Face - Agents Course - Unit 1
 
+**Hugging Face Space: https://sl4psh0t-college-comparison-agent.hf.space/
+
 **How does it work:
 User inputs up to 3 colleges in the prompt template. The College Comparison Agent makes an API call to https://collegescorecard.ed.gov/ and outputs the comparison to the user screen.
 
