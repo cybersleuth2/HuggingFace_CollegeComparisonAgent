@@ -5,6 +5,7 @@ from smolagents import CodeAgent, tool
 from smolagents.agent_types import AgentText
 from tools.final_answer import FinalAnswerTool
 from Gradio_UI import GradioUI
+import pandas as pd
 
 # College Scorecard API URL
 COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
@@ -15,10 +16,10 @@ def fetch_college_data(college_name: str) -> dict:
     Fetches data from the College Scorecard API for a given college name.
 
     Args:
-        college_name (str): The name of the college for which to fetch data.
+        college_name (str): The name of the college to search for.
 
     Returns:
-        dict: A dictionary with the college's data or an error message if the request fails.
+        dict: A dictionary with college data or error message.
     """
     try:
         api_key = os.getenv("COLLEGE_API_KEY")
