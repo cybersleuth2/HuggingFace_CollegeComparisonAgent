@@ -12,19 +12,11 @@ COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools
 def fetch_college_data(college_name: str) -> dict:
     """
     Fetches data from the College Scorecard API for a given college name.
-
-    Args:
-        college_name (str): The name of the college to search for.
-
-    Returns:
-        dict: A dictionary containing the college's data, including name, city, state, 
-              student size, ownership, SAT score, ACT score, acceptance rate, and tuition.
     """
     try:
-        # Fetch API key securely from environment variables
         api_key = os.getenv("COLLEGE_API_KEY")
-        if not api_key:
-            return {"error": "API key is missing. Please set the COLLEGE_API_KEY environment variable."}
+        if not api_key or "YOUR_API_KEY" in api_key:
+            return {"error": "API key is missing or invalid. Please check your Hugging Face secrets."}
 
         params = {
             "api_key": api_key,
@@ -33,15 +25,13 @@ def fetch_college_data(college_name: str) -> dict:
                       "school.sat_scores.average.overall,school.act_scores.average.overall,"
                       "school.admission_rate.overall,school.cost.tuition.in_state,school.cost.tuition.out_of_state"
         }
+
         response = requests.get(COLLEGE_SCORECARD_API_URL, params=params)
-        
-        # Check for a successful response (status code 200)
+
         if response.status_code != 200:
-            return {"error": f"API request failed with status code {response.status_code}."}
+            return {"error": f"API request failed with status code {response.status_code}: {response.text}"}
 
         data = response.json()
-        
-        # Check if the data contains the necessary results
         if "results" in data and data["results"]:
             college_data = data["results"][0]
             return {
@@ -65,12 +55,6 @@ def fetch_college_data(college_name: str) -> dict:
 def compare_colleges(college_data_list: list) -> str:
     """
     Compares up to 3 colleges and returns an HTML table displaying their key metrics.
-
-    Args:
-        college_data_list (list): A list of dictionaries, where each dictionary contains data for a college.
-        
-    Returns:
-        str: An HTML table as a string showing the comparison of colleges' data.
     """
     if not college_data_list:
         return "<p>No valid college data provided.</p>"
@@ -101,12 +85,6 @@ def compare_colleges(college_data_list: list) -> str:
 def generate_comparison_chart(college_data_list: list) -> go.Figure:
     """
     Generates a bar chart comparing key metrics for up to 3 colleges.
-
-    Args:
-        college_data_list (list): A list of dictionaries, where each dictionary contains data for a college.
-
-    Returns:
-        go.Figure: A Plotly bar chart figure comparing key metrics of the colleges.
     """
     labels = ['Tuition (In-state)', 'Tuition (Out-of-state)', 'SAT Score', 'ACT Score', 'Acceptance Rate', 'Student Size']
     data = {
@@ -132,26 +110,15 @@ def generate_comparison_chart(college_data_list: list) -> go.Figure:
                       yaxis_title="Values")
     return fig
 
-# Required by Gradio UI
 def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
     """
     Fetches data for three colleges and generates a table and chart comparing them.
-
-    Args:
-        college1_name (str): The name of the first college.
-        college2_name (str): The name of the second college.
-        college3_name (str, optional): The name of the third college, default is None.
-
-    Returns:
-        tuple: A tuple containing:
-            - An HTML table string comparing the colleges.
-            - A Plotly chart figure comparing the colleges.
     """
     college_data_list = []
     for name in [college1_name, college2_name, college3_name]:
         if name:
             data = fetch_college_data(name)
-            if "error" not in data:
+            if isinstance(data, dict) and "error" not in data:
                 college_data_list.append(data)
 
     if not college_data_list:
@@ -164,7 +131,7 @@ def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: s
 # Set up the agent
 final_answer = FinalAnswerTool()
 model = HfApiModel(
-    model_id='mistralai/Mistral-Small-3.1-24B-Instruct-2503',  # Updated to the free Mistral model
+    model_id='mistralai/Mistral-Small-3.1-24B-Instruct-2503',  # Using the free Mistral model
     max_tokens=1024,
     temperature=0.5,
 )
@@ -178,5 +145,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch Gradio UI (without share=False argument)
-GradioUI(agent).launch()  # Removed share=False
+# Launch the Gradio interface
+GradioUI(agent).launch()  # share=False is default behavior
