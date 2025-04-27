@@ -1,90 +1,125 @@
-import mimetypes
-import os
-import re
-import shutil
-from typing import Optional
-import requests
 import gradio as gr
-from smolagents.agent_types import AgentAudio, AgentImage, AgentText, handle_agent_output_types
 from smolagents.agents import ActionStep, MultiStepAgent
+from smolagents.agent_types import AgentAudio, AgentImage, AgentText, handle_agent_output_types
 from smolagents.memory import MemoryStep
-from smolagents.utils import _is_package_available
+import re
 
-# Function to fetch college data
-def get_college_data(college_name: str):
-    api_url = "https://api.data.gov/ed/collegescorecard/v1/schools"
-    params = {
-        'school.name': college_name,
-        'fields': 'id,school.name,school.city,school.state,school.student_size,school.ownership,school.sat_scores,school.act_scores,school.admission_rate,school.cost.tuition',
-        'api_key': 'YOUR_API_KEY',  # Replace with your actual API key
-    }
 
-    try:
-        response = requests.get(api_url, params=params)
-        response.raise_for_status()
-        data = response.json()
+def pull_messages_from_step(step_log: MemoryStep):
+    """Extract and format messages from each agent step."""
+    if isinstance(step_log, ActionStep):
+        step_number = f"Step {step_log.step_number}" if step_log.step_number is not None else ""
+        yield {"role": "assistant", "content": f"**{step_number}**"}
 
-        if 'results' in data and len(data['results']) > 0:
-            college_info = data['results'][0]
-            return {
-                'name': college_info['school']['name'],
-                'city': college_info['school']['city'],
-                'state': college_info['school']['state'],
-                'student_size': college_info['school']['student_size'],
-                'ownership': college_info['school']['ownership'],
-                'sat_score': college_info['school'].get('sat_scores', {}).get('average', {}).get('overall', 'N/A'),
-                'act_score': college_info['school'].get('act_scores', {}).get('average', {}).get('overall', 'N/A'),
-                'acceptance_rate': college_info['school'].get('admission_rate', {}).get('overall', 'N/A'),
-                'tuition_in_state': college_info['school'].get('cost', {}).get('tuition', {}).get('in_state', 'N/A'),
-                'tuition_out_of_state': college_info['school'].get('cost', {}).get('tuition', {}).get('out_of_state', 'N/A'),
+        if hasattr(step_log, "model_output") and step_log.model_output:
+            model_output = step_log.model_output.strip()
+            model_output = re.sub(r"```\s*<end_code>", "```", model_output)
+            model_output = re.sub(r"<end_code>\s*```", "```", model_output)
+            model_output = model_output.strip()
+            yield {"role": "assistant", "content": model_output}
+
+        if hasattr(step_log, "tool_calls") and step_log.tool_calls:
+            first_tool_call = step_log.tool_calls[0]
+            used_code = first_tool_call.name == "python_interpreter"
+            parent_id = f"call_{len(step_log.tool_calls)}"
+
+            args = first_tool_call.arguments
+            content = str(args.get("answer", str(args))) if isinstance(args, dict) else str(args)
+
+            if used_code:
+                content = re.sub(r"```.*?\n", "", content)
+                content = re.sub(r"\s*<end_code>\s*", "", content).strip()
+                if not content.startswith("```python"):
+                    content = f"```python\n{content}\n```"
+
+            parent_message_tool = {
+                "role": "assistant",
+                "content": content,
+                "metadata": {
+                    "title": f"🛠️ Used tool {first_tool_call.name}",
+                    "id": parent_id,
+                    "status": "pending",
+                },
             }
-        else:
-            return {'error': 'No data found for this college.'}
+            yield parent_message_tool
 
-    except requests.exceptions.RequestException as e:
-        return {'error': str(e)}
+            if hasattr(step_log, "observations") and step_log.observations:
+                obs = step_log.observations.strip()
+                if obs:
+                    obs = re.sub(r"^Execution logs:\s*", "", obs)
+                    yield {
+                        "role": "assistant",
+                        "content": obs,
+                        "metadata": {"title": "📝 Execution Logs", "parent_id": parent_id, "status": "done"},
+                    }
 
-# Function to compare colleges
-def compare_colleges(college_name_1: str, college_name_2: str):
-    college_data_1 = get_college_data(college_name_1)
-    college_data_2 = get_college_data(college_name_2)
+            if hasattr(step_log, "error") and step_log.error:
+                yield {
+                    "role": "assistant",
+                    "content": str(step_log.error),
+                    "metadata": {"title": "💥 Error", "parent_id": parent_id, "status": "done"},
+                }
 
-    if 'error' in college_data_1:
-        return f"Error fetching data for {college_name_1}: {college_data_1['error']}"
-    if 'error' in college_data_2:
-        return f"Error fetching data for {college_name_2}: {college_data_2['error']}"
-    
-    # Generate a comparison of the two colleges
-    comparison = f"Comparison of {college_name_1} and {college_name_2}:\n\n"
-    comparison += f"**Tuition (In-State):**\n{college_name_1}: ${college_data_1['tuition_in_state']}  |  {college_name_2}: ${college_data_2['tuition_in_state']}\n\n"
-    comparison += f"**Tuition (Out-of-State):**\n{college_name_1}: ${college_data_1['tuition_out_of_state']}  |  {college_name_2}: ${college_data_2['tuition_out_of_state']}\n\n"
-    comparison += f"**SAT Score:**\n{college_name_1}: {college_data_1['sat_score']}  |  {college_name_2}: {college_data_2['sat_score']}\n\n"
-    comparison += f"**ACT Score:**\n{college_name_1}: {college_data_1['act_score']}  |  {college_name_2}: {college_data_2['act_score']}\n\n"
-    comparison += f"**Acceptance Rate:**\n{college_name_1}: {college_data_1['acceptance_rate']}  |  {college_name_2}: {college_data_2['acceptance_rate']}\n\n"
-    comparison += f"**Student Size:**\n{college_name_1}: {college_data_1['student_size']}  |  {college_name_2}: {college_data_2['student_size']}"
+            parent_message_tool["metadata"]["status"] = "done"
 
-    return comparison
+        elif hasattr(step_log, "error") and step_log.error:
+            yield {"role": "assistant", "content": str(step_log.error), "metadata": {"title": "💥 Error"}}
 
-# Gradio UI class for college comparison
+        footnote = step_number
+        if hasattr(step_log, "input_token_count") and hasattr(step_log, "output_token_count"):
+            footnote += f" | Input: {step_log.input_token_count:,}, Output: {step_log.output_token_count:,}"
+        if hasattr(step_log, "duration") and step_log.duration:
+            footnote += f" | Duration: {round(float(step_log.duration), 2)}s"
+
+        footnote = f"""<span style="color: #bbbbc2; font-size: 12px;">{footnote}</span>"""
+        yield {"role": "assistant", "content": footnote}
+        yield {"role": "assistant", "content": "-----"}
+
+
+def stream_to_gradio(agent, task: str, reset_agent_memory: bool = False, additional_args=None):
+    """Runs the agent on a task and streams the output for Gradio."""
+    total_input_tokens = 0
+    total_output_tokens = 0
+
+    for step_log in agent.run(task, stream=True, reset=reset_agent_memory, additional_args=additional_args):
+        if hasattr(agent.model, "last_input_token_count") and agent.model.last_input_token_count is not None:
+            total_input_tokens += agent.model.last_input_token_count
+            total_output_tokens += agent.model.last_output_token_count
+            if isinstance(step_log, ActionStep):
+                step_log.input_token_count = agent.model.last_input_token_count
+                step_log.output_token_count = agent.model.last_output_token_count
+
+        for message in pull_messages_from_step(step_log):
+            yield message
+
+    final_answer = handle_agent_output_types(step_log)
+
+    if isinstance(final_answer, AgentText):
+        yield {"role": "assistant", "content": f"**Final answer:**\n{final_answer.to_string()}\n"}
+    elif isinstance(final_answer, AgentImage):
+        yield {"role": "assistant", "content": {"path": final_answer.to_string(), "mime_type": "image/png"}}
+    elif isinstance(final_answer, AgentAudio):
+        yield {"role": "assistant", "content": {"path": final_answer.to_string(), "mime_type": "audio/wav"}}
+    else:
+        yield {"role": "assistant", "content": f"**Final answer:** {str(final_answer)}"}
+
+
 class GradioUI:
-    def __init__(self, task: str = "Compare Two Colleges"):
+    """Simplified Gradio interface for launching your agent."""
+
+    def __init__(self, agent: MultiStepAgent, task: str = "Compare college tuition costs", reset_agent_memory: bool = False):
+        self.agent = agent
         self.task = task
+        self.reset_agent_memory = reset_agent_memory
 
     def launch(self):
-        """Launch the Gradio UI."""
+        """Start the Gradio interface without share link."""
         iface = gr.Interface(
-            fn=compare_colleges,
-            inputs=[
-                gr.Textbox(label="College Name 1", placeholder="Enter the first college name"),
-                gr.Textbox(label="College Name 2", placeholder="Enter the second college name"),
-            ],
-            outputs="text",
+            fn=lambda task: stream_to_gradio(self.agent, task, self.reset_agent_memory),
+            inputs=[gr.Textbox(label="College Comparison Task", placeholder="e.g., Compare Harvard vs Stanford", lines=1)],
+            outputs=[gr.Chatbot(type="messages")],
+            title="🎓 College Comparison Agent",
             live=True,
-            title="College Comparison App",
-            description="Compare colleges based on tuition, SAT scores, ACT scores, acceptance rates, and more!",
+            allow_flagging="never",
         )
-        iface.launch(share=False)  # Disables the share link
-
-if __name__ == "__main__":
-    gradio_ui = GradioUI()
-    gradio_ui.launch()
+        iface.launch(share=False)  # share=False disables the external share link
