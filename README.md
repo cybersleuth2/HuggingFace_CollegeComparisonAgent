@@ -9,6 +9,6 @@ User inputs up to 3 colleges in the prompt template. The College Comparison Agen
 - May add enhancements in the future to improve user interface
 
 **References:
-https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503
-https://github.com/huggingface/smolagents
-https://huggingface.co/learn/agents-course/unit1
+- https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503
+- https://github.com/huggingface/smolagents
+- https://huggingface.co/learn/agents-course/unit1
