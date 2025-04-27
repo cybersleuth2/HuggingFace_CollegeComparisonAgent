@@ -12,12 +12,6 @@ COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools
 def fetch_college_data(college_name: str) -> dict:
     """
     Fetches data from the College Scorecard API for a given college name.
-
-    Args:
-        college_name (str): The name of the college to search for.
-
-    Returns:
-        dict: A dictionary with college data or error message.
     """
     try:
         api_key = os.getenv("COLLEGE_API_KEY")
@@ -61,13 +55,6 @@ def fetch_college_data(college_name: str) -> dict:
 def compare_colleges(college_data_list: list) -> str:
     """
     Compares up to 3 colleges and returns an HTML table displaying their key metrics.
-
-    Args:
-        college_data_list (list): A list of dictionaries containing data for each college. Each dictionary
-                                   includes key metrics such as name, city, state, SAT/ACT scores, and tuition fees.
-
-    Returns:
-        str: An HTML string representing a table comparison of the colleges.
     """
     if not college_data_list:
         return "<p>No valid college data provided.</p>"
@@ -95,6 +82,52 @@ def compare_colleges(college_data_list: list) -> str:
 
     return html
 
+def generate_comparison_chart(college_data_list: list) -> go.Figure:
+    """
+    Generates a bar chart comparing key metrics for up to 3 colleges.
+    """
+    labels = ['Tuition (In-state)', 'Tuition (Out-of-state)', 'SAT Score', 'ACT Score', 'Acceptance Rate', 'Student Size']
+    data = {
+        "Tuition (In-state)": [college['tuition_in_state'] for college in college_data_list],
+        "Tuition (Out-of-state)": [college['tuition_out_of_state'] for college in college_data_list],
+        "SAT Score": [college['sat_score'] for college in college_data_list],
+        "ACT Score": [college['act_score'] for college in college_data_list],
+        "Acceptance Rate": [college['acceptance_rate'] for college in college_data_list],
+        "Student Size": [college['student_size'] for college in college_data_list]
+    }
+
+    fig = go.Figure()
+    for i, college in enumerate(college_data_list):
+        fig.add_trace(go.Bar(
+            x=labels,
+            y=[data[label][i] for label in labels],
+            name=college['name']
+        ))
+
+    fig.update_layout(title="College Comparison",
+                      barmode='group',
+                      xaxis_title="Metrics",
+                      yaxis_title="Values")
+    return fig
+
+def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
+    """
+    Fetches data for up to 3 colleges and generates comparison.
+    """
+    college_data_list = []
+    for name in [college1_name, college2_name, college3_name]:
+        if name:
+            data = fetch_college_data(name)
+            if isinstance(data, dict) and "error" not in data:
+                college_data_list.append(data)
+
+    if not college_data_list:
+        return "<p>No data found.</p>", go.Figure()
+
+    table = compare_colleges(college_data_list)
+    chart = generate_comparison_chart(college_data_list)
+    return table, chart
+
 # Set up the agent
 final_answer = FinalAnswerTool()
 model = HfApiModel(
@@ -112,5 +145,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch the Gradio UI with share=True
-GradioUI(agent).launch(share=True)
+# Launch the Gradio UI with share=True passed during initialization
+GradioUI(agent, share=True).launch()  # This launches the Gradio interface and shares the link
