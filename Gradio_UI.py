@@ -109,7 +109,7 @@ class GradioUI:
         self.agent = agent
         self.task = task
         self.reset_agent_memory = reset_agent_memory
-        self.share = share  # This will allow for sharing option
+        self.share = share  # Store the share argument
 
     def launch(self):
         """Start the Gradio interface with optional sharing of link."""
@@ -121,5 +121,5 @@ class GradioUI:
             live=True,
             allow_flagging="never",
         )
-        # Use the share parameter here to enable external access via a link
+        # Now, we pass share argument when launching
         iface.launch(share=self.share)
