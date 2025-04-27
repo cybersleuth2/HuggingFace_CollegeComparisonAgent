@@ -4,7 +4,6 @@ from smolagents.agent_types import AgentAudio, AgentImage, AgentText, handle_age
 from smolagents.memory import MemoryStep
 import re
 
-
 def pull_messages_from_step(step_log: MemoryStep):
     """Extract and format messages from each agent step."""
     if isinstance(step_log, ActionStep):
@@ -75,7 +74,6 @@ def pull_messages_from_step(step_log: MemoryStep):
         yield {"role": "assistant", "content": footnote}
         yield {"role": "assistant", "content": "-----"}
 
-
 def stream_to_gradio(agent, task: str, reset_agent_memory: bool = False, additional_args=None):
     """Runs the agent on a task and streams the output for Gradio."""
     total_input_tokens = 0
@@ -103,7 +101,6 @@ def stream_to_gradio(agent, task: str, reset_agent_memory: bool = False, additio
     else:
         yield {"role": "assistant", "content": f"**Final answer:** {str(final_answer)}"}
 
-
 class GradioUI:
     """Simplified Gradio interface for launching your agent."""
 
@@ -112,8 +109,8 @@ class GradioUI:
         self.task = task
         self.reset_agent_memory = reset_agent_memory
 
-    def launch(self):
-        """Start the Gradio interface without share link."""
+    def launch(self, share=True):
+        """Start the Gradio interface with shareable link."""
         iface = gr.Interface(
             fn=lambda task: stream_to_gradio(self.agent, task, self.reset_agent_memory),
             inputs=[gr.Textbox(label="College Comparison Task", placeholder="e.g., Compare Harvard vs Stanford", lines=1)],
@@ -122,4 +119,4 @@ class GradioUI:
             live=True,
             allow_flagging="never",
         )
-        iface.launch(share=False)  # share=False disables the external share link
+        iface.launch(share=share)  # set share=True to enable external share link
