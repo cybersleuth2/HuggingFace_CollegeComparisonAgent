@@ -1,7 +1,8 @@
-from smolagents import CodeAgent, HfApiModel, tool
 import requests
 import os
 import plotly.graph_objects as go
+from smolagents import CodeAgent, tool
+from smolagents.agent_types import AgentText
 from tools.final_answer import FinalAnswerTool
 from Gradio_UI import GradioUI
 
@@ -12,6 +13,12 @@ COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools
 def fetch_college_data(college_name: str) -> dict:
     """
     Fetches data from the College Scorecard API for a given college name.
+
+    Args:
+        college_name (str): The name of the college for which to fetch data.
+
+    Returns:
+        dict: A dictionary with the college's data or an error message if the request fails.
     """
     try:
         api_key = os.getenv("COLLEGE_API_KEY")
@@ -55,6 +62,12 @@ def fetch_college_data(college_name: str) -> dict:
 def compare_colleges(college_data_list: list) -> str:
     """
     Compares up to 3 colleges and returns an HTML table displaying their key metrics.
+
+    Args:
+        college_data_list (list): List of college data dictionaries.
+
+    Returns:
+        str: HTML table of comparison.
     """
     if not college_data_list:
         return "<p>No valid college data provided.</p>"
@@ -85,6 +98,12 @@ def compare_colleges(college_data_list: list) -> str:
 def generate_comparison_chart(college_data_list: list) -> go.Figure:
     """
     Generates a bar chart comparing key metrics for up to 3 colleges.
+
+    Args:
+        college_data_list (list): List of college data dictionaries.
+
+    Returns:
+        go.Figure: Plotly chart.
     """
     labels = ['Tuition (In-state)', 'Tuition (Out-of-state)', 'SAT Score', 'ACT Score', 'Acceptance Rate', 'Student Size']
     data = {
@@ -110,34 +129,10 @@ def generate_comparison_chart(college_data_list: list) -> go.Figure:
                       yaxis_title="Values")
     return fig
 
-def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
-    """
-    Fetches data for up to 3 colleges and generates comparison.
-    """
-    college_data_list = []
-    for name in [college1_name, college2_name, college3_name]:
-        if name:
-            data = fetch_college_data(name)
-            if isinstance(data, dict) and "error" not in data:
-                college_data_list.append(data)
-
-    if not college_data_list:
-        return "<p>No data found.</p>", go.Figure()
-
-    table = compare_colleges(college_data_list)
-    chart = generate_comparison_chart(college_data_list)
-    return table, chart
-
 # Set up the agent
 final_answer = FinalAnswerTool()
-model = HfApiModel(
-    model_id='mistralai/Mistral-Small-3.1-24B-Instruct-2503',
-    max_tokens=1024,
-    temperature=0.5,
-)
-
 agent = CodeAgent(
-    model=model,
+    model='mistralai/Mistral-Small-3.1-24B-Instruct-2503',  # Example model
     tools=[final_answer, fetch_college_data, compare_colleges],
     max_steps=6,
     verbosity_level=1,
@@ -145,5 +140,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch the Gradio UI with share=True passed during initialization
-GradioUI(agent, share=True).launch()  # This launches the Gradio interface and shares the link
+# Launch Gradio UI
+GradioUI(agent).launch()
