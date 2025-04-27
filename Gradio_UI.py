@@ -1,8 +1,7 @@
+from tools import fetch_college_data, compare_colleges, generate_comparison_chart
 import gradio as gr
 import pandas as pd
 from smolagents.agents import MultiStepAgent
-from smolagents.agent_types import AgentText, handle_agent_output_types
-from tools import fetch_college_data, compare_colleges, generate_comparison_chart
 
 class GradioUI:
     """Simplified Gradio interface for launching your agent."""
@@ -74,6 +73,6 @@ class GradioUI:
         # Save to a CSV file
         csv_filename = "college_comparison.csv"
         df.to_csv(csv_filename, index=False)
-        #
+
         # Return the CSV file for download
         return csv_filename
