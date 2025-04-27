@@ -1,7 +1,7 @@
 ## Hugging Face - Agents Course - Unit 1
 
 **How does it work:
-User inputs up to 3 colleges in the prompt template. The College Comparison Agent makes an API call to https://collegescorecard.ed.gov/ and then outputs the comparison to the user screen.
+User inputs up to 3 colleges in the prompt template. The College Comparison Agent makes an API call to https://collegescorecard.ed.gov/ and outputs the comparison to the user screen.
 
 **Known Issues:
 - Agent hallucinates or data is not being pulled correctly
