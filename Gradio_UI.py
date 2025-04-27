@@ -65,20 +65,26 @@ def compare_colleges(college_name_1: str, college_name_2: str):
 
     return comparison
 
-# Gradio UI for college comparison
-def launch_gradio():
-    iface = gr.Interface(
-        fn=compare_colleges,
-        inputs=[
-            gr.Textbox(label="College Name 1", placeholder="Enter the first college name"),
-            gr.Textbox(label="College Name 2", placeholder="Enter the second college name"),
-        ],
-        outputs="text",
-        live=True,
-        title="College Comparison App",
-        description="Compare colleges based on tuition, SAT scores, ACT scores, acceptance rates, and more!",
-    )
-    iface.launch(share=False)  # Disables the share link
+# Gradio UI class for college comparison
+class GradioUI:
+    def __init__(self, task: str = "Compare Two Colleges"):
+        self.task = task
+
+    def launch(self):
+        """Launch the Gradio UI."""
+        iface = gr.Interface(
+            fn=compare_colleges,
+            inputs=[
+                gr.Textbox(label="College Name 1", placeholder="Enter the first college name"),
+                gr.Textbox(label="College Name 2", placeholder="Enter the second college name"),
+            ],
+            outputs="text",
+            live=True,
+            title="College Comparison App",
+            description="Compare colleges based on tuition, SAT scores, ACT scores, acceptance rates, and more!",
+        )
+        iface.launch(share=False)  # Disables the share link
 
 if __name__ == "__main__":
-    launch_gradio()
+    gradio_ui = GradioUI()
+    gradio_ui.launch()
