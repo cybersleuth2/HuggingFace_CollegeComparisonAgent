@@ -74,6 +74,6 @@ class GradioUI:
         # Save to a CSV file
         csv_filename = "college_comparison.csv"
         df.to_csv(csv_filename, index=False)
-
+        #
         # Return the CSV file for download
         return csv_filename
