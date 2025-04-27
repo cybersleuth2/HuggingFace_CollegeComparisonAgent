@@ -21,15 +21,27 @@ def fetch_college_data(college_name: str) -> dict:
               student size, ownership, SAT score, ACT score, acceptance rate, and tuition.
     """
     try:
+        # Fetch API key securely from environment variables
+        api_key = os.getenv("COLLEGE_API_KEY")
+        if not api_key:
+            return {"error": "API key is missing. Please set the COLLEGE_API_KEY environment variable."}
+
         params = {
-            "api_key": os.getenv("COLLEGE_API_KEY"),
+            "api_key": api_key,
             "school.name": college_name,
             "fields": "school.name,school.city,school.state,school.student.size,school.ownership,"
                       "school.sat_scores.average.overall,school.act_scores.average.overall,"
                       "school.admission_rate.overall,school.cost.tuition.in_state,school.cost.tuition.out_of_state"
         }
         response = requests.get(COLLEGE_SCORECARD_API_URL, params=params)
+        
+        # Check for a successful response (status code 200)
+        if response.status_code != 200:
+            return {"error": f"API request failed with status code {response.status_code}."}
+
         data = response.json()
+        
+        # Check if the data contains the necessary results
         if "results" in data and data["results"]:
             college_data = data["results"][0]
             return {
@@ -45,9 +57,9 @@ def fetch_college_data(college_name: str) -> dict:
                 "tuition_out_of_state": college_data["school"]["cost"]["tuition"]["out_of_state"]
             }
         else:
-            return {"error": "College not found or API error."}
+            return {"error": "College not found or no valid data returned from the API."}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"An error occurred: {str(e)}"}
 
 @tool
 def compare_colleges(college_data_list: list) -> str:
@@ -166,5 +178,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch
-GradioUI(agent).launch()
+# Launch Gradio UI
+GradioUI(agent).launch(share=False)  # Set `share=False` to disable the shareable link
