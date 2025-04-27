@@ -178,5 +178,5 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Launch Gradio UI
-GradioUI(agent).launch(share=False)  # Set `share=False` to disable the shareable link
+# Launch Gradio UI (without share=False argument)
+GradioUI(agent).launch()  # Removed share=False
