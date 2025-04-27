@@ -7,7 +7,7 @@ from Gradio_UI import GradioUI
 
 # College Scorecard API URL
 COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
-
+#
 @tool
 def fetch_college_data(college_name: str) -> dict:
     """
