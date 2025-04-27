@@ -1,8 +1,9 @@
-from smolagents import CodeAgent, HfApiModel, tool
 import requests
 import os
 import plotly.graph_objects as go
-from tools.final_answer import FinalAnswerTool  # Ensure this is still correct based on your setup
+from smolagents import CodeAgent, HfApiModel, tool
+from tools.final_answer import FinalAnswerTool
+from Gradio_UI import GradioUI
 
 # College Scorecard API URL
 COLLEGE_SCORECARD_API_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
@@ -127,6 +128,32 @@ def generate_comparison_chart(college_data_list: list) -> go.Figure:
                       yaxis_title="Values")
     return fig
 
+def compare_colleges_ui(college1_name: str, college2_name: str, college3_name: str = None):
+    """
+    Fetches data for up to 3 colleges and generates comparison.
+
+    Args:
+        college1_name (str): First college.
+        college2_name (str): Second college.
+        college3_name (str): Optional third college.
+
+    Returns:
+        tuple: HTML table and Plotly chart.
+    """
+    college_data_list = []
+    for name in [college1_name, college2_name, college3_name]:
+        if name:
+            data = fetch_college_data(name)
+            if isinstance(data, dict) and "error" not in data:
+                college_data_list.append(data)
+
+    if not college_data_list:
+        return "<p>No data found.</p>", go.Figure()
+
+    table = compare_colleges(college_data_list)
+    chart = generate_comparison_chart(college_data_list)
+    return table, chart
+
 # Set up the agent
 final_answer = FinalAnswerTool()
 model = HfApiModel(
@@ -144,6 +171,6 @@ agent = CodeAgent(
     description="Compare colleges based on data.",
 )
 
-# Import GradioUI here, at the end, after everything is set up
+# Launch the Gradio UI with share=True
 from Gradio_UI import GradioUI
 GradioUI(agent).launch()
