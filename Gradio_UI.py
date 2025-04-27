@@ -138,12 +138,9 @@ class GradioUI:
             inputs=[
                 gr.Textbox(label="Task", lines=1, placeholder="Enter your task description", value=self.task),
             ],
-            outputs=[gr.Chatbot()],
+            outputs=[gr.Chatbot(type="messages")],  # Updated to use 'messages' type
             live=True,
-            allow_flagging="never",
-            allow_screenshot=False,
             title="College Comparison Agent",
-            theme="compact",
             examples=[["Compare college tuition costs"]],
         )
         iface.launch()
