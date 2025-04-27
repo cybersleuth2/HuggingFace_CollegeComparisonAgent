@@ -126,32 +126,4 @@ def stream_to_gradio(agent, task: str, reset_agent_memory: bool = False, additio
 class GradioUI:
     """A one-line interface to launch your agent in Gradio"""
 
-    def __init__(self, agent: MultiStepAgent, file_upload_folder: str | None = None):
-        if not _is_package_available("gradio"):
-            raise ModuleNotFoundError("Please install 'gradio' extra to use the GradioUI: `pip install 'smolagents[gradio]'`")
-        self.agent = agent
-        self.file_upload_folder = file_upload_folder
-
-    def interact_with_agent(self, prompt, messages):
-        messages.append({"role": "user", "content": prompt})
-        yield messages
-        for msg in stream_to_gradio(self.agent, task=prompt, reset_agent_memory=False):
-            messages.append(msg)
-            yield messages
-        yield messages
-
-    def launch(self):
-        """Creates and launches the Gradio interface"""
-        with gr.Blocks() as demo:
-            gr.Markdown("# Interact with the Agent")
-
-            with gr.Row():
-                prompt_input = gr.Textbox(label="Enter your prompt", lines=2)
-                submit_button = gr.Button("Submit")
-
-            with gr.Row():
-                chat_box = gr.Chatbot(label="Chat", type="messages")
-
-            submit_button.click(self.interact_with_agent, inputs=[prompt_input, chat_box], outputs=chat_box)
-
-        demo.launch()
+    def __init__(self, agent: MultiStep
