@@ -43,34 +43,38 @@ def compare_colleges(college_data_list: List[dict]) -> pd.DataFrame:
 
 # Gradio interface setup
 def launch_gradio_ui():
-    # Inputs for Gradio interface (text boxes for college names)
-    college1 = gr.Textbox(label="Enter the first college name")
-    college2 = gr.Textbox(label="Enter the second college name")
-    college3 = gr.Textbox(label="Enter the third college name")
-    
-    # Output area for the comparison table
-    output_table = gr.DataFrame()
-    
-    def compare_colleges_ui(college1_name, college2_name, college3_name):
-        # Fetch data for each college
-        college1_data = fetch_college_data(college1_name)
-        college2_data = fetch_college_data(college2_name)
-        college3_data = fetch_college_data(college3_name)
-
-        # Combine data into a list of dictionaries
-        college_data_list = [college1_data, college2_data, college3_data]
+    with gr.Blocks() as demo:
+        # Inputs for Gradio interface (text boxes for college names)
+        college1 = gr.Textbox(label="Enter the first college name")
+        college2 = gr.Textbox(label="Enter the second college name")
+        college3 = gr.Textbox(label="Enter the third college name")
         
-        # Call compare_colleges function to generate the table
-        comparison_table = compare_colleges(college_data_list)
-        
-        return comparison_table
+        # Output area for the comparison table
+        output_table = gr.DataFrame()
 
-    # Create a button to trigger the comparison
-    submit_btn = gr.Button("Compare Colleges")
-    submit_btn.click(compare_colleges_ui, inputs=[college1, college2, college3], outputs=[output_table])
+        # Define the button and click event within the gr.Blocks context
+        submit_btn = gr.Button("Compare Colleges")
+
+        # Define the function to be called when the button is clicked
+        def compare_colleges_ui(college1_name, college2_name, college3_name):
+            # Fetch data for each college
+            college1_data = fetch_college_data(college1_name)
+            college2_data = fetch_college_data(college2_name)
+            college3_data = fetch_college_data(college3_name)
+
+            # Combine data into a list of dictionaries
+            college_data_list = [college1_data, college2_data, college3_data]
+
+            # Call compare_colleges function to generate the table
+            comparison_table = compare_colleges(college_data_list)
+
+            return comparison_table
+
+        # Set the button click event to trigger the comparison
+        submit_btn.click(compare_colleges_ui, inputs=[college1, college2, college3], outputs=[output_table])
 
     # Launch the Gradio interface
-    gr.Interface(fn=None, inputs=[college1, college2, college3], outputs=[output_table], live=True).launch()
+    demo.launch()
 
 if __name__ == "__main__":
     launch_gradio_ui()
