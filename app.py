@@ -61,9 +61,39 @@ def fetch_college_data(college_name: str) -> dict:
 def compare_colleges(college_data_list: list) -> str:
     """
     Compares up to 3 colleges and returns an HTML table displaying their key metrics.
+
+    Args:
+        college_data_list (list): A list of dictionaries containing data for each college. Each dictionary
+                                   includes key metrics such as name, city, state, SAT/ACT scores, and tuition fees.
+
+    Returns:
+        str: An HTML string representing a table comparison of the colleges.
     """
-    # HTML generation for comparison remains the same as before
-    ...
+    if not college_data_list:
+        return "<p>No valid college data provided.</p>"
+
+    headers = ["Name", "City", "State", "Student Size", "SAT", "ACT", "Acceptance Rate", "Tuition (In-state)", "Tuition (Out-of-state)"]
+    rows = []
+    for college in college_data_list:
+        rows.append([
+            college.get("name", "N/A"),
+            college.get("city", "N/A"),
+            college.get("state", "N/A"),
+            college.get("student_size", "N/A"),
+            college.get("sat_score", "N/A"),
+            college.get("act_score", "N/A"),
+            college.get("acceptance_rate", "N/A"),
+            college.get("tuition_in_state", "N/A"),
+            college.get("tuition_out_of_state", "N/A"),
+        ])
+
+    html = "<table border='1' style='border-collapse: collapse; padding: 8px;'>"
+    html += "<tr>" + "".join([f"<th>{header}</th>" for header in headers]) + "</tr>"
+    for row in rows:
+        html += "<tr>" + "".join([f"<td>{str(cell)}</td>" for cell in row]) + "</tr>"
+    html += "</table>"
+
+    return html
 
 # Set up the agent
 final_answer = FinalAnswerTool()
