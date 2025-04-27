@@ -126,4 +126,24 @@ def stream_to_gradio(agent, task: str, reset_agent_memory: bool = False, additio
 class GradioUI:
     """A one-line interface to launch your agent in Gradio"""
 
-    def __init__(self, agent: MultiStep
+    def __init__(self, agent: MultiStepAgent, task: str = "Search Task", reset_agent_memory: bool = False):
+        self.agent = agent
+        self.task = task
+        self.reset_agent_memory = reset_agent_memory
+
+    def launch(self):
+        """Launch the Gradio UI."""
+        iface = gr.Interface(
+            fn=stream_to_gradio,
+            inputs=[
+                gr.Textbox(label="Task", lines=1, placeholder="Enter your task description", value=self.task),
+            ],
+            outputs=[gr.Chatbot()],
+            live=True,
+            allow_flagging="never",
+            allow_screenshot=False,
+            title="College Comparison Agent",
+            theme="compact",
+            examples=[["Compare college tuition costs"]],
+        )
+        iface.launch()
