@@ -1,37 +1,13 @@
 import gradio as gr
-from smolagents.agents import MultiStepAgent
-from smolagents.agent_types import AgentText
-from smolagents.memory import MemoryStep
-from smolagents.tools import fetch_college_data, compare_colleges, generate_comparison_chart
-import pandas as pd
+from smolagents import CodeAgent, tool
+from app import fetch_college_data, compare_colleges, generate_comparison_chart  # Import directly from app.py
 
 class GradioUI:
-    def __init__(self, agent: MultiStepAgent, task: str = "Compare college tuition costs", reset_agent_memory: bool = False):
+    def __init__(self, agent):
         self.agent = agent
-        self.task = task
-        self.reset_agent_memory = reset_agent_memory
 
-    def launch(self):
-        """Start the Gradio interface."""
-        iface = gr.Interface(
-            fn=self.process_input,
-            inputs=[
-                gr.Textbox(label="College 1", placeholder="Enter first college name"),
-                gr.Textbox(label="College 2", placeholder="Enter second college name"),
-                gr.Textbox(label="College 3 (Optional)", placeholder="Enter third college name", optional=True),
-                gr.Button("Submit")
-            ],
-            outputs=[
-                gr.Dataframe(headers=["Name", "City", "State", "Student Size", "SAT", "ACT", "Acceptance Rate", "Tuition (In-state)", "Tuition (Out-of-state)"]),
-                gr.Plotly(figure=generate_comparison_chart)
-            ],
-            live=True,
-            title="🎓 College Comparison Agent"
-        )
-        iface.launch(share=True)  # share=True to enable sharing via a public link
-
-    def process_input(self, college1_name: str, college2_name: str, college3_name: str = None):
-        """Process the college names, fetch data, and return the comparison table and chart."""
+    def compare_colleges_ui(self, college1_name: str, college2_name: str, college3_name: str = None):
+        # This will use the compare_colleges function from app.py
         college_data_list = []
         for name in [college1_name, college2_name, college3_name]:
             if name:
@@ -40,8 +16,24 @@ class GradioUI:
                     college_data_list.append(data)
 
         if not college_data_list:
-            return pd.DataFrame(), go.Figure()  # Return empty dataframe and figure
+            return "<p>No data found.</p>", None  # Return None for the chart if no data found
 
         table = compare_colleges(college_data_list)
         chart = generate_comparison_chart(college_data_list)
         return table, chart
+
+    def launch(self):
+        with gr.Blocks() as demo:
+            college1 = gr.Textbox(label="College 1")
+            college2 = gr.Textbox(label="College 2")
+            college3 = gr.Textbox(label="College 3 (Optional)")
+
+            output_table = gr.HTML()
+            output_chart = gr.Plot()
+
+            submit_btn = gr.Button("Compare Colleges")
+
+            submit_btn.click(self.compare_colleges_ui, inputs=[college1, college2, college3], outputs=[output_table, output_chart])
+
+        demo.launch()
+
