@@ -5,7 +5,7 @@ class GradioUI:
         self.agent = agent
 
     def compare_colleges_ui(self, college1_name: str, college2_name: str, college3_name: str = None):
-        # Import the necessary functions from app.py here, inside the function, to prevent circular imports
+        # Import necessary functions from app.py
         from app import fetch_college_data, compare_colleges, generate_comparison_chart
         
         college_data_list = []
@@ -24,6 +24,7 @@ class GradioUI:
 
     def launch(self):
         with gr.Blocks() as demo:
+            # Define inputs and outputs
             college1 = gr.Textbox(label="College 1")
             college2 = gr.Textbox(label="College 2")
             college3 = gr.Textbox(label="College 3 (Optional)")
@@ -31,8 +32,10 @@ class GradioUI:
             output_table = gr.HTML()
             output_chart = gr.Plot()
 
+            # Define the button
             submit_btn = gr.Button("Compare Colleges")
 
+            # Correctly use the click event and ensure proper binding
             submit_btn.click(self.compare_colleges_ui, inputs=[college1, college2, college3], outputs=[output_table, output_chart])
 
         demo.launch()
